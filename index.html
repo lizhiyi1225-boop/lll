@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IDV Assignment 4 – Grouped Bar Chart with D3.js</title>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      background: #e6ebeb;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px 24px 28px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      border-radius: 10px;
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 0 0 6px;
+    }
+
+    p.subtitle {
+      margin: 0 0 18px;
+      color: #555;
+      font-size: 14px;
+    }
+
+    /* svg 尺寸改为靠属性控制，这里只做外观 */
+    svg {
+      background:#ffffff;
+    }
+
+    .axis path,
+    .axis line {
+      stroke: #333;
+    }
+
+    .axis text {
+      font-size: 12px;
+    }
+
+    .y-label {
+      font-size: 12px;
+      fill: #333;
+    }
+
+    .x-label {
+      font-size: 12px;
+      fill: #333;
+    }
+
+    .legend {
+      font-size: 11px;
+    }
+
+    .legend rect {
+      stroke: #333;
+      stroke-width: 0.4;
+    }
+
+    .bar {
+      cursor: pointer;
+    }
+
+    .tooltip {
+      position: absolute;
+      background: #ffffff;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      font-size: 12px;
+      pointer-events: none;
+      opacity: 0;
+      line-height: 1.4;
+      white-space: nowrap;
+    }
+
+    .note {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .legend-title {
+      font-size: 11px;
+      fill: #666;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Standard Accuracy by Approach and Dataset</h1>
+  <p class="subtitle">
+    Data Option 1 – Comparing different robustness approaches on CIFAR-100, CIFAR-10, SVHN, and MNIST.
+  </p>
+
+  <!-- 关键修改：直接在这里给 svg 写宽高 -->
+  <svg id="chart" width="960" height="480"></svg>
+
+  <p class="note">
+    Hover over a bar to see all three metrics: Standard Accuracy, Certified Robustness Rate, and Certified Robust Accuracy.
+  </p>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+  // 直接通过 attr 读取宽高，避免 NaN
+  const svg = d3.select("#chart");
+  const width = +svg.attr("width");
+  const height = +svg.attr("height");
+
+  const margin = { top: 60, right: 160, bottom: 60, left: 60 };
+  const innerWidth  = width  - margin.left - margin.right;
+  const innerHeight = height - margin.top  - margin.bottom;
+
+  const g = svg.append("g")
+    .attr("transform", `translate(${margin.left},${margin.top})`);
+
+  const datasets = ["CIFAR-100", "CIFAR-10", "SVHN", "MNIST"];
+
+  const tooltip = d3.select("#tooltip");
+
+  // 确保 data_option1.json 和 index.html 在同一个文件夹
+  d3.json("data_option1.json").then(rawData => {
+    const approaches = Array.from(new Set(rawData.map(d => d.approach)));
+
+    const nested = datasets.map(ds => ({
+      dataset: ds,
+      values: rawData
+        .filter(d => d.dataset === ds)
+        .map(d => ({
+          approach: d.approach,
+          standardAccuracy: d.standardAccuracy,
+          certifiedRobustnessRate: d.certifiedRobustnessRate,
+          certifiedRobustAccuracy: d.certifiedRobustAccuracy
+        }))
+    }));
+
+    const x0 = d3.scaleBand()
+      .domain(datasets)
+      .range([0, innerWidth])
+      .paddingInner(0.2);
+
+    const x1 = d3.scaleBand()
+      .domain(approaches)
+      .range([0, x0.bandwidth()])
+      .padding(0.1);
+
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(nested, d => d3.max(d.values, v => v.standardAccuracy)) + 5])
+      .nice()
+      .range([innerHeight, 0]);
+
+    const color = d3.scaleOrdinal()
+      .domain(approaches)
+      .range([
+        "#4c78a8", "#f58518", "#e45756", "#72b7b2",
+        "#54a24b", "#eeca3b", "#b279a2", "#ff9da6", "#9d755d"
+      ]);
+
+    const xAxis = d3.axisBottom(x0);
+    const yAxis = d3.axisLeft(y);
+
+    g.append("g")
+      .attr("class", "axis x-axis")
+      .attr("transform", `translate(0,${innerHeight})`)
+      .call(xAxis);
+
+    g.append("g")
+      .attr("class", "axis y-axis")
+      .call(yAxis);
+
+    g.append("text")
+      .attr("class", "y-label")
+      .attr("x", -innerHeight / 2)
+      .attr("y", -40)
+      .attr("transform", "rotate(-90)")
+      .attr("text-anchor", "middle")
+      .text("Standard Accuracy (%)");
+
+    g.append("text")
+      .attr("class", "x-label")
+      .attr("x", innerWidth / 2)
+      .attr("y", innerHeight + 40)
+      .attr("text-anchor", "middle")
+      .text("Dataset");
+
+    g.append("text")
+      .attr("x", innerWidth / 2)
+      .attr("y", -20)
+      .attr("text-anchor", "middle")
+      .style("font-size", "14px")
+      .style("font-weight", "600")
+      .text("Comparison of Standard Accuracy across Robustness Approaches");
+
+    const datasetGroup = g.selectAll(".dataset-group")
+      .data(nested)
+      .enter()
+      .append("g")
+      .attr("class", "dataset-group")
+      .attr("transform", d => `translate(${x0(d.dataset)},0)`);
+
+    const bars = datasetGroup.selectAll(".bar")
+      .data(d => d.values.map(v => ({
+        dataset: d.dataset,
+        ...v
+      })))
+      .enter()
+      .append("rect")
+      .attr("class", "bar")
+      .attr("x", d => x1(d.approach))
+      .attr("width", x1.bandwidth())
+      .attr("y", innerHeight)
+      .attr("height", 0)
+      .attr("fill", d => color(d.approach))
+      .attr("fill-opacity", 0.9);
+
+    // Transition：进入动画
+    bars.transition()
+      .duration(800)
+      .delay((d, i) => i * 40)
+      .attr("y", d => y(d.standardAccuracy))
+      .attr("height", d => innerHeight - y(d.standardAccuracy));
+
+    // Interaction：hover 显示 tooltip + 高亮
+    bars.on("mouseover", function(event, d) {
+        d3.selectAll(".bar").attr("fill-opacity", 0.25);
+        d3.select(this).attr("fill-opacity", 1.0);
+
+        tooltip
+          .style("opacity", 1)
+          .html(`
+            <strong>${d.approach}</strong><br/>
+            Dataset: ${d.dataset}<br/>
+            Standard Acc.: ${d.standardAccuracy.toFixed(2)}%<br/>
+            Cert. Robustness Rate: ${d.certifiedRobustnessRate.toFixed(2)}%<br/>
+            Cert. Robust Accuracy: ${d.certifiedRobustAccuracy.toFixed(2)}%
+          `)
+          .style("left", (event.pageX + 12) + "px")
+          .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mousemove", function(event) {
+        tooltip
+          .style("left", (event.pageX + 12) + "px")
+          .style("top", (event.pageY - 28) + "px");
+      })
+      .on("mouseout", function() {
+        d3.selectAll(".bar").attr("fill-opacity", 0.9);
+        tooltip.style("opacity", 0);
+      });
+
+    const legendGroup = g.append("g")
+      .attr("transform", `translate(${innerWidth + 20}, 10)`);
+
+    legendGroup.append("text")
+      .attr("class", "legend-title")
+      .attr("x", 0)
+      .attr("y", 0)
+      .text("Approach");
+
+    const legendItem = legendGroup.selectAll(".legend-item")
+      .data(approaches)
+      .enter()
+      .append("g")
+      .attr("class", "legend-item")
+      .attr("transform", (d, i) => `translate(0, ${15 + i * 16})`);
+
+    legendItem.append("rect")
+      .attr("x", 0)
+      .attr("y", -10)
+      .attr("width", 12)
+      .attr("height", 12)
+      .attr("fill", d => color(d));
+
+    legendItem.append("text")
+      .attr("x", 18)
+      .attr("y", 0)
+      .attr("dominant-baseline", "middle")
+      .text(d => d);
+  }).catch(err => {
+    console.error("Error loading data:", err);
+  });
+</script>
+</body>
+</html>
