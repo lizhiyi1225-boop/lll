@@ -32,9 +32,8 @@
       font-size: 14px;
     }
 
-    /* svg 尺寸改为靠属性控制，这里只做外观 */
     svg {
-      background:#ffffff;
+      background: #ffffff;
     }
 
     .axis path,
@@ -102,7 +101,7 @@
     Data Option 1 – Comparing different robustness approaches on CIFAR-100, CIFAR-10, SVHN, and MNIST.
   </p>
 
-  <!-- 关键修改：直接在这里给 svg 写宽高 -->
+  <!-- 直接给 SVG 宽高 -->
   <svg id="chart" width="960" height="480"></svg>
 
   <p class="note">
@@ -113,7 +112,55 @@
 <div class="tooltip" id="tooltip"></div>
 
 <script>
-  // 直接通过 attr 读取宽高，避免 NaN
+  // ① 直接在 JS 里写入 Data Option 1 的完整数据
+  const rawData = [
+    { approach: "ERM",   dataset: "CIFAR-100", standardAccuracy: 81.03, certifiedRobustnessRate: 9.28,  certifiedRobustAccuracy: 4.52 },
+    { approach: "ERM",   dataset: "CIFAR-10",  standardAccuracy: 94.85, certifiedRobustnessRate: 1.25,  certifiedRobustAccuracy: 1.25 },
+    { approach: "ERM",   dataset: "SVHN",      standardAccuracy: 94.44, certifiedRobustnessRate: 52.72, certifiedRobustAccuracy: 51.04 },
+    { approach: "ERM",   dataset: "MNIST",     standardAccuracy: 99.37, certifiedRobustnessRate: 26.01, certifiedRobustAccuracy: 24.96 },
+
+    { approach: "DA",    dataset: "CIFAR-100", standardAccuracy: 78.27, certifiedRobustnessRate: 15.04, certifiedRobustAccuracy: 6.15 },
+    { approach: "DA",    dataset: "CIFAR-10",  standardAccuracy: 94.21, certifiedRobustnessRate: 81.08, certifiedRobustAccuracy: 76.07 },
+    { approach: "DA",    dataset: "SVHN",      standardAccuracy: 94.69, certifiedRobustnessRate: 82.08, certifiedRobustAccuracy: 82.01 },
+    { approach: "DA",    dataset: "MNIST",     standardAccuracy: 99.42, certifiedRobustnessRate: 85.23, certifiedRobustAccuracy: 84.12 },
+
+    { approach: "PGDT",  dataset: "CIFAR-100", standardAccuracy: 64.35, certifiedRobustnessRate: 57.07, certifiedRobustAccuracy: 32.93 },
+    { approach: "PGDT",  dataset: "CIFAR-10",  standardAccuracy: 84.38, certifiedRobustnessRate: 87.07, certifiedRobustAccuracy: 82.90 },
+    { approach: "PGDT",  dataset: "SVHN",      standardAccuracy: 91.19, certifiedRobustnessRate: 87.89, certifiedRobustAccuracy: 86.68 },
+    { approach: "PGDT",  dataset: "MNIST",     standardAccuracy: 99.16, certifiedRobustnessRate: 94.65, certifiedRobustAccuracy: 94.63 },
+
+    { approach: "TRADES",dataset: "CIFAR-100", standardAccuracy: 62.55, certifiedRobustnessRate: 59.27, certifiedRobustAccuracy: 38.85 },
+    { approach: "TRADES",dataset: "CIFAR-10",  standardAccuracy: 80.42, certifiedRobustnessRate: 88.54, certifiedRobustAccuracy: 78.80 },
+    { approach: "TRADES",dataset: "SVHN",      standardAccuracy: 86.16, certifiedRobustnessRate: 87.89, certifiedRobustAccuracy: 84.76 },
+    { approach: "TRADES",dataset: "MNIST",     standardAccuracy: 99.10, certifiedRobustnessRate: 94.76, certifiedRobustAccuracy: 94.61 },
+
+    { approach: "MART",  dataset: "CIFAR-100", standardAccuracy: 63.68, certifiedRobustnessRate: 58.79, certifiedRobustAccuracy: 49.37 },
+    { approach: "MART",  dataset: "CIFAR-10",  standardAccuracy: 81.54, certifiedRobustnessRate: 78.90, certifiedRobustAccuracy: 72.21 },
+    { approach: "MART",  dataset: "SVHN",      standardAccuracy: 90.20, certifiedRobustnessRate: 85.23, certifiedRobustAccuracy: 78.82 },
+    { approach: "MART",  dataset: "MNIST",     standardAccuracy: 98.94, certifiedRobustnessRate: 94.13, certifiedRobustAccuracy: 94.09 },
+
+    { approach: "RS",    dataset: "CIFAR-100", standardAccuracy: 56.87, certifiedRobustnessRate: 60.38, certifiedRobustAccuracy: 47.50 },
+    { approach: "RS",    dataset: "CIFAR-10",  standardAccuracy: 89.45, certifiedRobustnessRate: 90.00, certifiedRobustAccuracy: 87.98 },
+    { approach: "RS",    dataset: "SVHN",      standardAccuracy: 88.35, certifiedRobustnessRate: 76.29, certifiedRobustAccuracy: 70.64 },
+    { approach: "RS",    dataset: "MNIST",     standardAccuracy: 97.16, certifiedRobustnessRate: 87.15, certifiedRobustAccuracy: 86.29 },
+
+    { approach: "IBP",   dataset: "CIFAR-100", standardAccuracy: 39.45, certifiedRobustnessRate: 49.34, certifiedRobustAccuracy: 29.20 },
+    { approach: "IBP",   dataset: "CIFAR-10",  standardAccuracy: 48.40, certifiedRobustnessRate: 54.70, certifiedRobustAccuracy: 40.00 },
+    { approach: "IBP",   dataset: "SVHN",      standardAccuracy: 73.09, certifiedRobustnessRate: 61.94, certifiedRobustAccuracy: 57.26 },
+    { approach: "IBP",   dataset: "MNIST",     standardAccuracy: 97.78, certifiedRobustnessRate: 89.18, certifiedRobustAccuracy: 88.51 },
+
+    { approach: "PRL",   dataset: "CIFAR-100", standardAccuracy: 64.89, certifiedRobustnessRate: 56.71, certifiedRobustAccuracy: 50.77 },
+    { approach: "PRL",   dataset: "CIFAR-10",  standardAccuracy: 93.82, certifiedRobustnessRate: 90.71, certifiedRobustAccuracy: 90.63 },
+    { approach: "PRL",   dataset: "SVHN",      standardAccuracy: 92.00, certifiedRobustnessRate: 93.11, certifiedRobustAccuracy: 91.07 },
+    { approach: "PRL",   dataset: "MNIST",     standardAccuracy: 99.32, certifiedRobustnessRate: 96.03, certifiedRobustAccuracy: 95.01 },
+
+    { approach: "TandT", dataset: "CIFAR-100", standardAccuracy: 65.56, certifiedRobustnessRate: 62.05, certifiedRobustAccuracy: 52.07 },
+    { approach: "TandT", dataset: "CIFAR-10",  standardAccuracy: 94.23, certifiedRobustnessRate: 95.08, certifiedRobustAccuracy: 91.75 },
+    { approach: "TandT", dataset: "SVHN",      standardAccuracy: 94.79, certifiedRobustnessRate: 93.15, certifiedRobustAccuracy: 92.81 },
+    { approach: "TandT", dataset: "MNIST",     standardAccuracy: 99.32, certifiedRobustnessRate: 97.80, certifiedRobustAccuracy: 96.80 }
+  ];
+
+  // ② 画图逻辑
   const svg = d3.select("#chart");
   const width = +svg.attr("width");
   const height = +svg.attr("height");
@@ -126,169 +173,163 @@
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
   const datasets = ["CIFAR-100", "CIFAR-10", "SVHN", "MNIST"];
-
   const tooltip = d3.select("#tooltip");
 
-  // 确保 data_option1.json 和 index.html 在同一个文件夹
-  d3.json("data_option1.json").then(rawData => {
-    const approaches = Array.from(new Set(rawData.map(d => d.approach)));
+  const approaches = Array.from(new Set(rawData.map(d => d.approach)));
 
-    const nested = datasets.map(ds => ({
-      dataset: ds,
-      values: rawData
-        .filter(d => d.dataset === ds)
-        .map(d => ({
-          approach: d.approach,
-          standardAccuracy: d.standardAccuracy,
-          certifiedRobustnessRate: d.certifiedRobustnessRate,
-          certifiedRobustAccuracy: d.certifiedRobustAccuracy
-        }))
-    }));
+  const nested = datasets.map(ds => ({
+    dataset: ds,
+    values: rawData
+      .filter(d => d.dataset === ds)
+      .map(d => ({
+        approach: d.approach,
+        standardAccuracy: d.standardAccuracy,
+        certifiedRobustnessRate: d.certifiedRobustnessRate,
+        certifiedRobustAccuracy: d.certifiedRobustAccuracy
+      }))
+  }));
 
-    const x0 = d3.scaleBand()
-      .domain(datasets)
-      .range([0, innerWidth])
-      .paddingInner(0.2);
+  const x0 = d3.scaleBand()
+    .domain(datasets)
+    .range([0, innerWidth])
+    .paddingInner(0.2);
 
-    const x1 = d3.scaleBand()
-      .domain(approaches)
-      .range([0, x0.bandwidth()])
-      .padding(0.1);
+  const x1 = d3.scaleBand()
+    .domain(approaches)
+    .range([0, x0.bandwidth()])
+    .padding(0.1);
 
-    const y = d3.scaleLinear()
-      .domain([0, d3.max(nested, d => d3.max(d.values, v => v.standardAccuracy)) + 5])
-      .nice()
-      .range([innerHeight, 0]);
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(nested, d => d3.max(d.values, v => v.standardAccuracy)) + 5])
+    .nice()
+    .range([innerHeight, 0]);
 
-    const color = d3.scaleOrdinal()
-      .domain(approaches)
-      .range([
-        "#4c78a8", "#f58518", "#e45756", "#72b7b2",
-        "#54a24b", "#eeca3b", "#b279a2", "#ff9da6", "#9d755d"
-      ]);
+  const color = d3.scaleOrdinal()
+    .domain(approaches)
+    .range([
+      "#4c78a8", "#f58518", "#e45756", "#72b7b2",
+      "#54a24b", "#eeca3b", "#b279a2", "#ff9da6", "#9d755d"
+    ]);
 
-    const xAxis = d3.axisBottom(x0);
-    const yAxis = d3.axisLeft(y);
+  const xAxis = d3.axisBottom(x0);
+  const yAxis = d3.axisLeft(y);
 
-    g.append("g")
-      .attr("class", "axis x-axis")
-      .attr("transform", `translate(0,${innerHeight})`)
-      .call(xAxis);
+  g.append("g")
+    .attr("class", "axis x-axis")
+    .attr("transform", `translate(0,${innerHeight})`)
+    .call(xAxis);
 
-    g.append("g")
-      .attr("class", "axis y-axis")
-      .call(yAxis);
+  g.append("g")
+    .attr("class", "axis y-axis")
+    .call(yAxis);
 
-    g.append("text")
-      .attr("class", "y-label")
-      .attr("x", -innerHeight / 2)
-      .attr("y", -40)
-      .attr("transform", "rotate(-90)")
-      .attr("text-anchor", "middle")
-      .text("Standard Accuracy (%)");
+  g.append("text")
+    .attr("class", "y-label")
+    .attr("x", -innerHeight / 2)
+    .attr("y", -40)
+    .attr("transform", "rotate(-90)")
+    .attr("text-anchor", "middle")
+    .text("Standard Accuracy (%)");
 
-    g.append("text")
-      .attr("class", "x-label")
-      .attr("x", innerWidth / 2)
-      .attr("y", innerHeight + 40)
-      .attr("text-anchor", "middle")
-      .text("Dataset");
+  g.append("text")
+    .attr("class", "x-label")
+    .attr("x", innerWidth / 2)
+    .attr("y", innerHeight + 40)
+    .attr("text-anchor", "middle")
+    .text("Dataset");
 
-    g.append("text")
-      .attr("x", innerWidth / 2)
-      .attr("y", -20)
-      .attr("text-anchor", "middle")
-      .style("font-size", "14px")
-      .style("font-weight", "600")
-      .text("Comparison of Standard Accuracy across Robustness Approaches");
+  g.append("text")
+    .attr("x", innerWidth / 2)
+    .attr("y", -20)
+    .attr("text-anchor", "middle")
+    .style("font-size", "14px")
+    .style("font-weight", "600")
+    .text("Comparison of Standard Accuracy across Robustness Approaches");
 
-    const datasetGroup = g.selectAll(".dataset-group")
-      .data(nested)
-      .enter()
-      .append("g")
-      .attr("class", "dataset-group")
-      .attr("transform", d => `translate(${x0(d.dataset)},0)`);
+  const datasetGroup = g.selectAll(".dataset-group")
+    .data(nested)
+    .enter()
+    .append("g")
+    .attr("class", "dataset-group")
+    .attr("transform", d => `translate(${x0(d.dataset)},0)`);
 
-    const bars = datasetGroup.selectAll(".bar")
-      .data(d => d.values.map(v => ({
-        dataset: d.dataset,
-        ...v
-      })))
-      .enter()
-      .append("rect")
-      .attr("class", "bar")
-      .attr("x", d => x1(d.approach))
-      .attr("width", x1.bandwidth())
-      .attr("y", innerHeight)
-      .attr("height", 0)
-      .attr("fill", d => color(d.approach))
-      .attr("fill-opacity", 0.9);
+  const bars = datasetGroup.selectAll(".bar")
+    .data(d => d.values.map(v => ({
+      dataset: d.dataset,
+      ...v
+    })))
+    .enter()
+    .append("rect")
+    .attr("class", "bar")
+    .attr("x", d => x1(d.approach))
+    .attr("width", x1.bandwidth())
+    .attr("y", innerHeight)
+    .attr("height", 0)
+    .attr("fill", d => color(d.approach))
+    .attr("fill-opacity", 0.9);
 
-    // Transition：进入动画
-    bars.transition()
-      .duration(800)
-      .delay((d, i) => i * 40)
-      .attr("y", d => y(d.standardAccuracy))
-      .attr("height", d => innerHeight - y(d.standardAccuracy));
+  // Transition：进入动画
+  bars.transition()
+    .duration(800)
+    .delay((d, i) => i * 40)
+    .attr("y", d => y(d.standardAccuracy))
+    .attr("height", d => innerHeight - y(d.standardAccuracy));
 
-    // Interaction：hover 显示 tooltip + 高亮
-    bars.on("mouseover", function(event, d) {
-        d3.selectAll(".bar").attr("fill-opacity", 0.25);
-        d3.select(this).attr("fill-opacity", 1.0);
+  // Interaction：hover 显示 tooltip + 高亮
+  bars.on("mouseover", function(event, d) {
+      d3.selectAll(".bar").attr("fill-opacity", 0.25);
+      d3.select(this).attr("fill-opacity", 1.0);
 
-        tooltip
-          .style("opacity", 1)
-          .html(`
-            <strong>${d.approach}</strong><br/>
-            Dataset: ${d.dataset}<br/>
-            Standard Acc.: ${d.standardAccuracy.toFixed(2)}%<br/>
-            Cert. Robustness Rate: ${d.certifiedRobustnessRate.toFixed(2)}%<br/>
-            Cert. Robust Accuracy: ${d.certifiedRobustAccuracy.toFixed(2)}%
-          `)
-          .style("left", (event.pageX + 12) + "px")
-          .style("top", (event.pageY - 28) + "px");
-      })
-      .on("mousemove", function(event) {
-        tooltip
-          .style("left", (event.pageX + 12) + "px")
-          .style("top", (event.pageY - 28) + "px");
-      })
-      .on("mouseout", function() {
-        d3.selectAll(".bar").attr("fill-opacity", 0.9);
-        tooltip.style("opacity", 0);
-      });
+      tooltip
+        .style("opacity", 1)
+        .html(
+          `<strong>${d.approach}</strong><br/>
+           Dataset: ${d.dataset}<br/>
+           Standard Acc.: ${d.standardAccuracy.toFixed(2)}%<br/>
+           Cert. Robustness Rate: ${d.certifiedRobustnessRate.toFixed(2)}%<br/>
+           Cert. Robust Accuracy: ${d.certifiedRobustAccuracy.toFixed(2)}%`
+        )
+        .style("left", (event.pageX + 12) + "px")
+        .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mousemove", function(event) {
+      tooltip
+        .style("left", (event.pageX + 12) + "px")
+        .style("top", (event.pageY - 28) + "px");
+    })
+    .on("mouseout", function() {
+      d3.selectAll(".bar").attr("fill-opacity", 0.9);
+      tooltip.style("opacity", 0);
+    });
 
-    const legendGroup = g.append("g")
-      .attr("transform", `translate(${innerWidth + 20}, 10)`);
+  const legendGroup = g.append("g")
+    .attr("transform", `translate(${innerWidth + 20}, 10)`);
 
-    legendGroup.append("text")
-      .attr("class", "legend-title")
-      .attr("x", 0)
-      .attr("y", 0)
-      .text("Approach");
+  legendGroup.append("text")
+    .attr("class", "legend-title")
+    .attr("x", 0)
+    .attr("y", 0)
+    .text("Approach");
 
-    const legendItem = legendGroup.selectAll(".legend-item")
-      .data(approaches)
-      .enter()
-      .append("g")
-      .attr("class", "legend-item")
-      .attr("transform", (d, i) => `translate(0, ${15 + i * 16})`);
+  const legendItem = legendGroup.selectAll(".legend-item")
+    .data(approaches)
+    .enter()
+    .append("g")
+    .attr("class", "legend-item")
+    .attr("transform", (d, i) => `translate(0, ${15 + i * 16})`);
 
-    legendItem.append("rect")
-      .attr("x", 0)
-      .attr("y", -10)
-      .attr("width", 12)
-      .attr("height", 12)
-      .attr("fill", d => color(d));
+  legendItem.append("rect")
+    .attr("x", 0)
+    .attr("y", -10)
+    .attr("width", 12)
+    .attr("height", 12)
+    .attr("fill", d => color(d));
 
-    legendItem.append("text")
-      .attr("x", 18)
-      .attr("y", 0)
-      .attr("dominant-baseline", "middle")
-      .text(d => d);
-  }).catch(err => {
-    console.error("Error loading data:", err);
-  });
+  legendItem.append("text")
+    .attr("x", 18)
+    .attr("y", 0)
+    .attr("dominant-baseline", "middle")
+    .text(d => d);
 </script>
 </body>
 </html>
